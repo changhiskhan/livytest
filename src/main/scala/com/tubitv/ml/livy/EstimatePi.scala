@@ -10,10 +10,7 @@ import scala.concurrent.Await
 import scala.concurrent.duration._
 import scala.language.postfixOps
 
-/**
- *  A WordCount example using Scala-API which reads text from a stream and saves
- *  it as data frames. The word with maximum count is the result.
- */
+
 object EstimatePi {
 
   var scalaClient: LivyScalaClient = _
@@ -56,12 +53,6 @@ object EstimatePi {
     }
   }
 
-  /**
-   * Submits a spark sql job to the livy server.
-   *
-   * The sql context job reads data frames from the given json path and executes
-   * a sql query to get the word with max count on the temp table created with data frames.
-   */
   def estimatePi(num_samples: Int): Long = {
     val start = System.currentTimeMillis()
     val handle = scalaClient.submit { context =>
