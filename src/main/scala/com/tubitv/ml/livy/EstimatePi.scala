@@ -5,6 +5,7 @@ import java.net.URI
 
 import org.apache.livy.LivyClientBuilder
 import org.apache.livy.scalaapi._
+import org.apache.spark.sql.SQLContext
 
 import scala.concurrent.Await
 import scala.concurrent.duration._
@@ -76,7 +77,17 @@ object EstimatePi {
     System.currentTimeMillis() - start
   }
 
-  private def stopClient(): Unit = {
+  def computeStats(timings: Seq[Long]): Map[Double, Double]= {
+    val quantiles = Array(0.5, 0.9, 0.95, 0.99)
+    quantiles zip Await.result(scalaClient.submit { context =>
+      val session = context.sqlctx.sparkSession
+      import session.implicits._
+      val df = context.sc.parallelize(timings).toDF("millis")
+      df.stat.approxQuantile("millis", quantiles, 0)
+    }, 60 second) toMap
+  }
+
+  def stopClient(): Unit = {
     if (scalaClient != null) {
       scalaClient.stop(true)
       scalaClient = null;
@@ -106,12 +117,22 @@ object EstimatePi {
     try {
       init("http://localhost:8900/")
       uploadRelevantJarsForJobExecution()
-      println(s"Warmed up nothing for ${doNothing()} milliseconds")
-      println(s"1000 nothings averaged ${(1 to 1000).map(_ => doNothing()).sum / 1000} milliseconds")
+      //println(s"Warmed up nothing for ${doNothing()} milliseconds")
+      //println("Running NOOP 10K times...")
+      //val noopTimings = (1 to 10000).map(_ => doNothing())
+      //println("Runtime quantiles: ")
+      //println(computeStats(noopTimings))
+
       println(s"Warmed up pi estimate for ${estimatePi(1000000)} milliseconds")
-      println(s"1000 pi's averaged ${(1 to 1000).map(_ => estimatePi(1000000)).sum / 1000} milliseconds")
+      println(s"Warmed up pi estimate for ${estimatePi(1000000)} milliseconds")
+      println(s"Warmed up pi estimate for ${estimatePi(1000000)} milliseconds")
+      println("Estimating PI 10K times...")
+      val piTimings = (1 to 10000).map{n => estimatePi(100000 + n)}
+      println("Runtime quantiles: ")
+      println(computeStats(piTimings))
     } finally {
-      stopClient()
+      scalaClient.stop(true)
+      scalaClient = null;
     }
   }
 }
